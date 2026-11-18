@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/courses/{{courseId}}/modules"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Bonus Lab",
+      "price": 0,
+      "isRequired": false,
+      "status": "published"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", () => pm.response.to.have.status(201));
+      pm.environment.set('moduleId2', pm.response.json().data.module.id);
+    language: text/javascript
+order: 8000

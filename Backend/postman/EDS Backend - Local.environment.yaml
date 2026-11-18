@@ -14,3 +14,11 @@ values:
     value: ''
   - key: targetUserId
     value: ''
+  - key: courseId
+    value: ''
+  - key: moduleId
+    value: ''
+  - key: moduleId2
+    value: ''
+  - key: instructorId
+    value: ''

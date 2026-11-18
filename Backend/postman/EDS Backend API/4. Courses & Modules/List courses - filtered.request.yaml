@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/courses?status=published&category=Medical&search=anatomy&sort=title"
+method: GET
+queryParams:
+  status: "published"
+  category: "Medical"
+  search: "anatomy"
+  sort: "title"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 3000

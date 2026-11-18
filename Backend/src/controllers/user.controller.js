@@ -5,7 +5,7 @@ import { publicUser } from "../utils/serializers.js";
 import { revokeAllSessions } from "../services/session.service.js";
 import { listUsersQuery, objectId } from "../validators/user.validators.js";
 
-const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import { escapeRegex } from "../utils/regex.js";
 
 export const listUsers = async (req, res) => {
   const { role, isActive, search, page, limit, sort } = listUsersQuery.parse(req.query);

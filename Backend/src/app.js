@@ -9,6 +9,8 @@ import { openapi } from "./docs/openapi.js";
 import { config } from "./config/env.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import courseRoutes from "./routes/course.routes.js";
+import moduleRoutes from "./routes/module.routes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 export const createApp = () => {
@@ -59,6 +61,8 @@ export const createApp = () => {
 
   app.use("/auth", authRoutes);
   app.use("/users", userRoutes);
+  app.use("/courses", courseRoutes);
+  app.use("/modules", moduleRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

@@ -1,0 +1,3 @@
+$kind: collection
+description: "Log in as SuperAdmin to create/manage content. Prices are integer piasters (100 = 1 EGP). To test instructor permissions: promote a user to Instructor, put their id in {{instructorId}}, assign them to a module, then log in as them and run the instructor request."
+order: 5000
