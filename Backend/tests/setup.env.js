@@ -1,0 +1,13 @@
+process.env.NODE_ENV = "test";
+process.env.ACCESS_TOKEN_SECRET = "test-access-secret-test-access-secret-0123";
+process.env.REFRESH_TOKEN_SECRET = "test-refresh-secret-test-refresh-secret-4567";
+process.env.JWT_ISSUER = "eds-test";
+process.env.JWT_AUDIENCE = "eds-test-client";
+process.env.GOOGLE_CLIENT_ID = "test-client-id.apps.googleusercontent.com";
+process.env.GOOGLE_CLIENT_SECRET = "test-google-secret";
+process.env.GOOGLE_REDIRECT_URI = "http://localhost:5000/auth/google/callback";
+process.env.LOGIN_RATE_LIMIT_MAX = "5";
+process.env.LOGIN_IP_RATE_LIMIT_MAX = "1000";
+process.env.AUTH_RATE_LIMIT_MAX = "1000";
+process.env.CORS_ORIGINS = "http://allowed.test";
+delete process.env.FRONTEND_URL;
