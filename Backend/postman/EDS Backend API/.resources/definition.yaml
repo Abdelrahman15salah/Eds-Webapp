@@ -1,0 +1,9 @@
+$kind: collection
+description: "Cookie-based auth: Postman's cookie jar stores access/refresh/csrf cookies automatically after Login. The collection pre-request script adds the X-CSRF-Token header for you. Run requests in folder order."
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Double-submit CSRF: echo the csrf_token cookie in the X-CSRF-Token header.
+      const csrf = pm.cookies.get('csrf_token');
+      if (csrf) pm.request.headers.upsert({ key: 'X-CSRF-Token', value: csrf });
+    language: text/javascript

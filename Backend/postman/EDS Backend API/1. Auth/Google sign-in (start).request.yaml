@@ -1,0 +1,7 @@
+$kind: http-request
+description: Browser-only flow. Open {{baseUrl}}/auth/google in a real browser.
+  Postman cannot complete Google's consent screen. After success the browser
+  holds the cookies (or you are redirected to FRONTEND_URL).
+url: "{{baseUrl}}/auth/google"
+method: GET
+order: 10000

@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { BCRYPT_ROUNDS, User } from "../models/User.model.js";
 import { config } from "../config/env.js";
-import { AppError, conflict, unauthorized } from "../utils/AppError.js";
+import { AppError, badRequest, conflict, forbidden, unauthorized } from "../utils/AppError.js";
 import {
   clearAuthCookies,
   COOKIE,
@@ -10,22 +10,14 @@ import {
   safeEqual,
   setAuthCookies,
 } from "../utils/cookies.js";
+import { publicUser } from "../utils/serializers.js";
 import {
   issueSession,
+  revokeAllSessions,
   revokeSessionByToken,
   rotateSession,
 } from "../services/session.service.js";
 import { buildAuthRequest, exchangeCodeForIdentity } from "../services/google.service.js";
-
-const publicUser = (u) => ({
-  id: String(u._id),
-  name: u.userName,
-  email: u.email,
-  role: u.role,
-  authProviders: u.authProviders,
-  emailVerified: u.emailVerified,
-  createdAt: u.createdAt,
-});
 
 // Valid hash used to burn equivalent CPU time when no password can match (timing parity).
 const DUMMY_HASH = bcrypt.hashSync("timing-equalizer", BCRYPT_ROUNDS);
@@ -79,6 +71,40 @@ export const logout = async (req, res) => {
 
 export const me = (req, res) => {
   res.json({ success: true, data: { user: publicUser(req.user) } });
+};
+
+export const updateMe = async (req, res) => {
+  const { name, phoneNumber } = req.body;
+  if (name !== undefined) req.user.userName = name;
+  if (phoneNumber !== undefined) req.user.phoneNumber = phoneNumber ?? undefined;
+  await req.user.save();
+  res.json({ success: true, data: { user: publicUser(req.user) } });
+};
+
+// Changes the password, ends every other session, and keeps the caller signed in.
+export const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = await User.findById(req.user._id).select("+password");
+  if (!user.password) {
+    throw badRequest("This account has no password (Google sign-in only)", "PASSWORD_NOT_SET");
+  }
+  // 403 (not 401) so clients do not mistake it for an expired session.
+  if (!(await user.comparePassword(currentPassword))) {
+    throw forbidden("Current password is incorrect", "INVALID_CURRENT_PASSWORD");
+  }
+  user.password = newPassword;
+  await user.save();
+
+  const fresh = await revokeAllSessions(user._id);
+  setAuthCookies(res, await issueSession(fresh, req));
+  res.json({ success: true, data: { message: "Password changed. Other sessions were signed out." } });
+};
+
+// Signs the user out of every device, including this one.
+export const logoutAll = async (req, res) => {
+  await revokeAllSessions(req.user._id);
+  clearAuthCookies(res);
+  res.json({ success: true, data: { message: "Logged out of all sessions" } });
 };
 
 /* ------------------------------ Google OAuth ------------------------------ */

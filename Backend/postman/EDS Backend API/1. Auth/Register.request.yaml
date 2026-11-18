@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "{{name}}2",
+      "email": "{{email}}",
+      "password": "{{password}}",
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('201 created, or 409 if already registered', () => pm.expect([201, 409]).to.include(pm.response.code));
+      if (pm.response.code === 201) pm.environment.set('userId', pm.response.json().data.user.id);
+    language: text/javascript
+order: 1000

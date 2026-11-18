@@ -1,0 +1,10 @@
+# Use this workspace to collaborate
+workspace:
+  id: 5bc52dd2-7b0c-40e0-804a-22e610cf658a
+
+localResources:
+  collections:
+    - ../Backend/postman/EDS Backend API
+  environments:
+    - ../Backend/postman/EDS-Backend.local.postman_environment.json
+    - ../Backend/postman/EDS Backend - Local.environment.yaml

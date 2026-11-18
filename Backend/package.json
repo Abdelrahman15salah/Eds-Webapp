@@ -9,7 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "make-admin": "node scripts/make-admin.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -22,7 +23,10 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.12.2",
+    "morgan": "^1.12.1",
+    "nodemailer": "^10.6.0",
     "nodemon": "^3.1.14",
+    "swagger-ui-express": "^5.0.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

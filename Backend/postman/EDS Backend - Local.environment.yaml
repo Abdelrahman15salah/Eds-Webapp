@@ -1,0 +1,16 @@
+name: EDS Backend - Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:5000'
+  - key: name
+    value: Test User
+  - key: email
+    value: tester@example.com
+  - key: password
+    value: Passw0rdOk
+  - key: newPassword
+    value: BrandNew123
+  - key: userId
+    value: ''
+  - key: targetUserId
+    value: ''

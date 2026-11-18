@@ -17,6 +17,10 @@ export const authenticate = async (req, res, next) => {
   const payload = verifyAccessToken(token);
   const user = await User.findById(payload.sub);
   if (!user || !user.isActive) throw unauthorized("Invalid token", "TOKEN_INVALID");
+  // Password change / logout-everywhere / deactivation bump tokenVersion.
+  if ((payload.tv ?? 0) !== (user.tokenVersion ?? 0)) {
+    throw unauthorized("Token has been revoked", "TOKEN_REVOKED");
+  }
   req.user = user;
   next();
 };

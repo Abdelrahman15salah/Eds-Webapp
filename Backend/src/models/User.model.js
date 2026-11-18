@@ -56,6 +56,11 @@ const userSchema = new mongoose.Schema(
       enum: ["local", "google"],
       default: ["local"],
     },
+    // Bumped to instantly invalidate every outstanding access token (see middleware/auth.js).
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
     emailVerified: {
       type: Boolean,
       default: false,

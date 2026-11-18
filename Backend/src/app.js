@@ -2,8 +2,13 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import morgan from "morgan";
+import mongoose from "mongoose";
+import swaggerUi from "swagger-ui-express";
+import { openapi } from "./docs/openapi.js";
 import { config } from "./config/env.js";
 import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 export const createApp = () => {
@@ -11,6 +16,18 @@ export const createApp = () => {
 
   // Needed for correct req.ip (rate limiting) behind a reverse proxy.
   if (config.trustProxy) app.set("trust proxy", config.trustProxy);
+
+  // Log method, path (NOT the query string: OAuth callbacks carry codes), status, time.
+  morgan.token("safe-url", (req) => req.originalUrl.split("?")[0]);
+  if (!config.isTest) {
+    app.use(morgan(":method :safe-url :status :res[content-length] - :response-time ms"));
+  }
+
+  // API docs are mounted before helmet (Swagger UI needs inline scripts); off in production unless ENABLE_DOCS=true.
+  if (!config.isProd || process.env.ENABLE_DOCS === "true") {
+    app.get("/docs.json", (req, res) => res.json(openapi));
+    app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi));
+  }
 
   app.use(helmet());
   app.use(
@@ -31,7 +48,17 @@ export const createApp = () => {
     res.json({ message: "Express server running with ES Modul-es" });
   });
 
+  app.get("/health", (req, res) => {
+    const dbUp = mongoose.connection.readyState === 1;
+    res.status(dbUp ? 200 : 503).json({
+      status: dbUp ? "ok" : "degraded",
+      db: dbUp ? "up" : "down",
+      uptime: Math.round(process.uptime()),
+    });
+  });
+
   app.use("/auth", authRoutes);
+  app.use("/users", userRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

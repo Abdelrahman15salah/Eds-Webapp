@@ -12,7 +12,7 @@ export const randomToken = (bytes = 32) =>
   crypto.randomBytes(bytes).toString("base64url");
 
 export const signAccessToken = (user) =>
-  jwt.sign({ typ: "access", role: user.role }, config.jwt.accessSecret, {
+  jwt.sign({ typ: "access", role: user.role, tv: user.tokenVersion ?? 0 }, config.jwt.accessSecret, {
     algorithm: ALG,
     subject: String(user._id),
     issuer: config.jwt.issuer,

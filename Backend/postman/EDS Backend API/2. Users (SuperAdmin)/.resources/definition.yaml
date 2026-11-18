@@ -1,0 +1,3 @@
+$kind: collection
+description: "Log in as a SuperAdmin first: use the `npm run make-admin -- <email>` script, then Login again."
+order: 3000

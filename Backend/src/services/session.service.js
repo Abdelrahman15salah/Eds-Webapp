@@ -66,6 +66,13 @@ export const rotateSession = async (rawToken, req) => {
   return { user, ...tokens };
 };
 
+// Ends every session of a user: revokes all refresh tokens and invalidates all
+// outstanding access tokens. Returns the updated user (with the new tokenVersion).
+export const revokeAllSessions = async (userId) => {
+  await RefreshToken.updateMany({ user: userId, revokedAt: null }, { revokedAt: new Date() });
+  return User.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } }, { returnDocument: "after" });
+};
+
 // Logout: best-effort revocation of the session behind a raw refresh token.
 export const revokeSessionByToken = async (rawToken) => {
   if (!rawToken) return;
