@@ -70,8 +70,16 @@ export const openapi = {
     "/courses/{id}": {
       get: { tags: ["Courses"], summary: "Course with its modules", security: csrf, parameters: [idParam], responses: { 200: { description: "OK" }, 404: err } },
       patch: { tags: ["Courses"], summary: "Update course (SuperAdmin)", security: csrf, parameters: [idParam], requestBody: body({ title: str, description: str, category: str, price: { type: "integer" }, status: str }, []), responses: { 200: { description: "OK" }, 403: err } },
-      delete: { tags: ["Courses"], summary: "Delete course and its modules (SuperAdmin)", security: csrf, parameters: [idParam], responses: { 200: { description: "Deleted" }, 403: err } },
     },
+    "/courses/{id}/archive": { post: { tags: ["Courses"], summary: "Archive course (SuperAdmin). Never hard-deleted.", security: csrf, parameters: [idParam], responses: { 200: { description: "Archived" }, 403: err, 409: err } } },
+    "/courses/{id}/restore": { post: { tags: ["Courses"], summary: "Restore archived course as draft (SuperAdmin)", security: csrf, parameters: [idParam], responses: { 200: { description: "Restored" }, 403: err, 409: err } } },
+    "/modules/{id}/archive": { post: { tags: ["Modules"], summary: "Archive module (SuperAdmin)", security: csrf, parameters: [idParam], responses: { 200: { description: "Archived" }, 403: err, 409: err } } },
+    "/modules/{id}/restore": { post: { tags: ["Modules"], summary: "Restore archived module as draft (SuperAdmin)", security: csrf, parameters: [idParam], responses: { 200: { description: "Restored" }, 403: err, 409: err } } },
+    "/admin/dashboard": { get: { tags: ["Dashboard"], summary: "Everything for the admin dashboard: server, traffic, users, catalog, recent activity (SuperAdmin). ?days=1..90", security: csrf, responses: { 200: { description: "OK" }, 403: err } } },
+    "/admin/server": { get: { tags: ["Dashboard"], summary: "Live server health: uptime, memory, CPU, database (SuperAdmin)", security: csrf, responses: { 200: { description: "OK" }, 403: err } } },
+    "/admin/traffic": { get: { tags: ["Dashboard"], summary: "Visits and API traffic with daily series and top pages (SuperAdmin). ?days=1..90", security: csrf, responses: { 200: { description: "OK" }, 403: err } } },
+    "/analytics/visit": { post: { tags: ["Dashboard"], summary: "Public: frontend reports a page view once per navigation", requestBody: body({ path: str }), responses: { 202: { description: "Recorded" }, 400: err, 429: err } } },
+    "/audit-logs": { get: { tags: ["Audit"], summary: "Audit trail (SuperAdmin). Filters: entityType, entityId, actor, action, page, limit", security: csrf, responses: { 200: { description: "OK" }, 403: err } } },
     "/courses/{id}/instructors": { put: { tags: ["Courses"], summary: "Replace course instructors (SuperAdmin)", security: csrf, parameters: [idParam], requestBody: body({ instructors: { type: "array", items: str } }), responses: { 200: { description: "OK" }, 400: err } } },
     "/courses/{id}/modules": {
       get: { tags: ["Modules"], summary: "List a course's modules in order", security: csrf, parameters: [idParam], responses: { 200: { description: "OK" } } },
@@ -81,7 +89,6 @@ export const openapi = {
     "/modules/{id}": {
       get: { tags: ["Modules"], summary: "Get module", security: csrf, parameters: [idParam], responses: { 200: { description: "OK" }, 404: err } },
       patch: { tags: ["Modules"], summary: "Update module. SuperAdmin: any field. Assigned instructor: title/description only", security: csrf, parameters: [idParam], requestBody: body({ title: str, description: str, price: { type: "integer" }, isRequired: { type: "boolean" }, status: str }, []), responses: { 200: { description: "OK" }, 403: err } },
-      delete: { tags: ["Modules"], summary: "Delete module (SuperAdmin)", security: csrf, parameters: [idParam], responses: { 200: { description: "Deleted" }, 403: err } },
     },
     "/modules/{id}/instructors": { put: { tags: ["Modules"], summary: "Replace module instructors (SuperAdmin)", security: csrf, parameters: [idParam], requestBody: body({ instructors: { type: "array", items: str } }), responses: { 200: { description: "OK" }, 400: err } } },
     "/users": { get: { tags: ["Users (SuperAdmin)"], summary: "List users", security: csrf, parameters: [

@@ -1,0 +1,3 @@
+$kind: collection
+description: "Admin endpoints need a SuperAdmin login. POST /analytics/visit is public: your frontend calls it once per page navigation. Run 'Report page view' a few times, then 'Dashboard (everything)'."
+order: 6000

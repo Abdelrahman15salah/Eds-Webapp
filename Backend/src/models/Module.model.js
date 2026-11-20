@@ -23,7 +23,7 @@ const moduleSchema = new mongoose.Schema(
     // Optional modules are a bonus: they do not affect course completion.
     isRequired: { type: Boolean, default: true },
     instructors: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    status: { type: String, enum: ["draft", "published"], default: "draft" },
+    status: { type: String, enum: ["draft", "published", "archived"], default: "draft" },
   },
   { timestamps: true },
 );

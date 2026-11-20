@@ -4,6 +4,7 @@ import { createApp } from "../src/app.js";
 import { User } from "../src/models/User.model.js";
 import { Course } from "../src/models/Course.model.js";
 import { Module } from "../src/models/Module.model.js";
+import { AuditLog } from "../src/models/AuditLog.model.js";
 import { signAccessToken } from "../src/utils/tokens.js";
 import { clearDb, cookieHeader, cookieValue, startDb, stopDb } from "./helpers.js";
 
@@ -131,7 +132,7 @@ describe("courses: create / read", () => {
   });
 
   it("returns 400 for malformed ids and 404 for unknown", async () => {
-    expect((await api("get", "/courses/not-an-id", "admin")).status).toBe(400);
+    expect((await api("get", "/courses/not_an_id!", "admin")).status).toBe(400);
     expect((await api("get", "/courses/64b000000000000000000000", "admin")).status).toBe(404);
   });
 });
@@ -155,13 +156,124 @@ describe("courses: update / delete / instructors", () => {
     expect((await api("put", `/courses/${c.id}/instructors`, "ivy", { instructors: [] })).status).toBe(403);
   });
 
-  it("deleting a course deletes its modules", async () => {
-    const c = await makeCourse();
+  it("archiving hides a course from students, keeps data, and restore returns a draft", async () => {
+    const c = await makeCourse({ status: "published" });
     await makeModule(c.id);
-    expect((await api("delete", `/courses/${c.id}`, "ivy")).status).toBe(403);
-    expect((await api("delete", `/courses/${c.id}`, "admin")).status).toBe(200);
-    expect(await Course.countDocuments()).toBe(0);
-    expect(await Module.countDocuments()).toBe(0);
+    expect((await api("post", `/courses/${c.id}/archive`, "ivy")).status).toBe(403);
+    const res = await api("post", `/courses/${c.id}/archive`, "admin");
+    expect(res.status).toBe(200);
+    expect(res.body.data.course.status).toBe("archived");
+    expect((await api("post", `/courses/${c.id}/archive`, "admin")).body.error.code).toBe("ALREADY_ARCHIVED");
+    expect((await api("get", `/courses/${c.id}`, "student")).status).toBe(404);
+    expect(await Course.countDocuments()).toBe(1);
+    expect(await Module.countDocuments()).toBe(1);
+    const back = await api("post", `/courses/${c.id}/restore`, "admin");
+    expect(back.body.data.course.status).toBe("draft");
+    expect((await api("post", `/courses/${c.id}/restore`, "admin")).body.error.code).toBe("NOT_ARCHIVED");
+  });
+
+  it("there is no hard-delete endpoint", async () => {
+    const c = await makeCourse();
+    expect((await api("delete", `/courses/${c.id}`, "admin")).status).toBe(404);
+  });
+});
+
+describe("slugs", () => {
+  it("generates a unique slug from the title and resolves courses by slug", async () => {
+    const a = await makeCourse({ title: "Endodontics 101!", status: "published" });
+    const b = await makeCourse({ title: "Endodontics 101", status: "published" });
+    expect(a.slug).toBe("endodontics-101");
+    expect(b.slug).toBe("endodontics-101-2");
+    const res = await api("get", "/courses/endodontics-101", "student");
+    expect(res.status).toBe(200);
+    expect(res.body.data.course.id).toBe(a.id);
+    expect((await api("get", "/courses/no-such-course", "admin")).status).toBe(404);
+    expect((await api("get", "/courses/Bad_Slug!", "admin")).status).toBe(400);
+  });
+
+  it("falls back to a generic slug for non-latin titles", async () => {
+    const c = await makeCourse({ title: "علم التشريح" });
+    expect(c.slug).toBe("course");
+  });
+
+  it("accepts a custom slug, rejects duplicates, and keeps the slug when the title changes", async () => {
+    const a = await makeCourse({ slug: "perio-basics" });
+    expect(a.slug).toBe("perio-basics");
+    expect((await api("post", "/courses", "admin", { title: "Other one", price: 1, slug: "perio-basics" })).body.error.code).toBe("SLUG_TAKEN");
+    const b = await makeCourse({ title: "Second" });
+    const clash = await api("patch", `/courses/${b.id}`, "admin", { slug: "perio-basics" });
+    expect(clash.status).toBe(409);
+    const renamed = await api("patch", `/courses/${a.id}`, "admin", { title: "Totally new title" });
+    expect(renamed.body.data.course.slug).toBe("perio-basics");
+    const moved = await api("patch", `/courses/${b.id}`, "admin", { slug: "second-edition" });
+    expect(moved.body.data.course.slug).toBe("second-edition");
+  });
+
+  it("works for module routes under a slug", async () => {
+    await makeCourse({ slug: "slugged" });
+    const m = await api("post", "/courses/slugged/modules", "admin", { title: "Mod one", price: 100 });
+    expect(m.status).toBe(201);
+    expect((await api("get", "/courses/slugged/modules", "admin")).body.data.modules).toHaveLength(1);
+  });
+});
+
+describe("audit trail", () => {
+  it("records create, field-level updates, archive and restore with the actor", async () => {
+    const c = await makeCourse();
+    await api("patch", `/courses/${c.id}`, "admin", { price: 99900, title: "Renamed course" });
+    await api("post", `/courses/${c.id}/archive`, "admin");
+    await api("post", `/courses/${c.id}/restore`, "admin");
+
+    const res = await api("get", `/audit-logs?entityType=course&entityId=${c.id}`, "admin");
+    expect(res.status).toBe(200);
+    const logs = res.body.data.logs;
+    expect(logs.map((l) => l.action)).toEqual(["course.restore", "course.archive", "course.update", "course.create"]);
+    const upd = logs.find((l) => l.action === "course.update");
+    expect(upd.actor).toMatchObject({ id: String(admin._id), role: "SuperAdmin" });
+    expect(upd.changes).toEqual(
+      expect.arrayContaining([
+        { field: "price", from: 150000, to: 99900 },
+        { field: "title", from: "Anatomy 101", to: "Renamed course" },
+      ]),
+    );
+    expect(upd.changes).toHaveLength(2);
+  });
+
+  it("logs instructor edits on modules, module archive and reorder; no-op saves are not logged", async () => {
+    const c = await makeCourse();
+    const m1 = await makeModule(c.id, { title: "First one", instructors: [String(ivy._id)] });
+    const m2 = await makeModule(c.id, { title: "Second one" });
+    await api("patch", `/modules/${m1.id}`, "ivy", { title: "First edited" });
+    await api("patch", `/modules/${m1.id}`, "ivy", { title: "First edited" });
+    await api("put", `/courses/${c.id}/modules/order`, "admin", { moduleIds: [m2.id, m1.id] });
+    expect((await api("post", `/modules/${m2.id}/archive`, "ivy")).status).toBe(403);
+    expect((await api("post", `/modules/${m2.id}/archive`, "admin")).body.data.module.status).toBe("archived");
+
+    const ml = await api("get", `/audit-logs?entityId=${m1.id}`, "admin");
+    expect(ml.body.data.logs.map((l) => l.action)).toEqual(["module.update", "module.create"]);
+    expect(ml.body.data.logs[0].actor.role).toBe("Instructor");
+    expect(ml.body.data.logs[0].changes).toEqual([{ field: "title", from: "First one", to: "First edited" }]);
+
+    const all = await api("get", "/audit-logs?action=course.reorder-modules", "admin");
+    expect(all.body.data.logs).toHaveLength(1);
+    expect(all.body.data.logs[0].changes[0].to).toEqual([m2.id, m1.id]);
+
+    await api("patch", `/courses/${c.id}`, "admin", { status: "published" });
+    await api("patch", `/modules/${m1.id}`, "admin", { status: "published" });
+    expect((await api("get", `/courses/${c.id}/modules`, "student")).body.data.modules).toHaveLength(1);
+    expect((await api("post", `/modules/${m2.id}/restore`, "admin")).body.data.module.status).toBe("draft");
+  });
+
+  it("is SuperAdmin only and filterable/paginated", async () => {
+    expect((await api("get", "/audit-logs", "ivy")).status).toBe(403);
+    expect((await api("get", "/audit-logs", "student")).status).toBe(403);
+    expect((await api("get", "/audit-logs")).status).toBe(401);
+    await makeCourse();
+    await makeCourse({ title: "Another" });
+    const res = await api("get", `/audit-logs?limit=1&actor=${admin._id}`, "admin");
+    expect(res.body.data.logs).toHaveLength(1);
+    expect(res.body.data.pagination.total).toBe(2);
+    expect(await AuditLog.countDocuments()).toBe(2);
   });
 });
 
@@ -263,15 +375,17 @@ describe("modules", () => {
     expect((await api("put", `/courses/${c.id}/modules/order`, "ivy", { moduleIds: [d.id, a.id, b.id] })).status).toBe(403);
   });
 
-  it("deleting a module re-numbers the rest", async () => {
-    const c = await makeCourse();
-    const a = await makeModule(c.id, { title: "AAA" });
-    const b = await makeModule(c.id, { title: "BBB" });
-    await makeModule(c.id, { title: "CCC" });
-    expect((await api("delete", `/modules/${b.id}`, "ivy")).status).toBe(403);
-    expect((await api("delete", `/modules/${b.id}`, "admin")).status).toBe(200);
-    const list = await api("get", `/courses/${c.id}/modules`, "admin");
-    expect(list.body.data.modules.map((m) => [m.title, m.order])).toEqual([["AAA", 1], ["CCC", 2]]);
+  it("archiving a module hides it from students and keeps its position", async () => {
+    const c = await makeCourse({ status: "published" });
+    const a = await makeModule(c.id, { title: "AAA", status: "published" });
+    const b = await makeModule(c.id, { title: "BBB", status: "published" });
+    expect((await api("post", `/modules/${b.id}/archive`, "ivy")).status).toBe(403);
+    expect((await api("post", `/modules/${b.id}/archive`, "admin")).status).toBe(200);
+    expect((await api("post", `/modules/${b.id}/archive`, "admin")).body.error.code).toBe("ALREADY_ARCHIVED");
+    expect((await api("get", `/courses/${c.id}/modules`, "student")).body.data.modules.map((m) => m.title)).toEqual(["AAA"]);
+    expect((await api("get", `/modules/${b.id}`, "student")).status).toBe(404);
+    expect((await api("delete", `/modules/${b.id}`, "admin")).status).toBe(404);
+    expect(await Module.countDocuments()).toBe(2);
     expect(a.order).toBe(1);
   });
 });

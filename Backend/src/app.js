@@ -10,7 +10,11 @@ import { config } from "./config/env.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import courseRoutes from "./routes/course.routes.js";
+import auditRoutes from "./routes/audit.routes.js";
 import moduleRoutes from "./routes/module.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+import { trafficMiddleware } from "./services/traffic.service.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 export const createApp = () => {
@@ -31,6 +35,7 @@ export const createApp = () => {
     app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi));
   }
 
+  app.use(trafficMiddleware);
   app.use(helmet());
   app.use(
     cors({
@@ -62,7 +67,10 @@ export const createApp = () => {
   app.use("/auth", authRoutes);
   app.use("/users", userRoutes);
   app.use("/courses", courseRoutes);
+  app.use("/audit-logs", auditRoutes);
   app.use("/modules", moduleRoutes);
+  app.use("/admin", adminRoutes);
+  app.use("/analytics", analyticsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

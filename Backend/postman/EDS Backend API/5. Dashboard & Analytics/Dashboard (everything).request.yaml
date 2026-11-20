@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/admin/dashboard?days=30"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", () => pm.response.to.have.status(200));
+      pm.test('has all sections', () => { const d = pm.response.json().data; ['server','traffic','users','catalog','recentActivity'].forEach(k => pm.expect(d).to.have.property(k)); });
+    language: text/javascript
+order: 2000

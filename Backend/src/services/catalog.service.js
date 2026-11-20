@@ -2,6 +2,7 @@ import { Course } from "../models/Course.model.js";
 import { Module } from "../models/Module.model.js";
 import { User } from "../models/User.model.js";
 import { AppError, badRequest, forbidden } from "../utils/AppError.js";
+import { SLUG_RE } from "../utils/slug.js";
 
 export const isAdmin = (user) => user.role === "SuperAdmin";
 export const isStaff = (user) => user.role === "SuperAdmin" || user.role === "Instructor";
@@ -24,9 +25,23 @@ export const assertInstructors = async (ids) => {
   }
 };
 
-// Students may only see published courses/modules; staff see everything.
-export const loadCourseFor = async (user, id) => {
-  const course = await Course.findById(id).populate("instructors", "userName");
+// Returns `base`, or base-2, base-3... until no other course uses it.
+export const uniqueSlug = async (base, excludeId) => {
+  let candidate = base;
+  for (let n = 2; ; n++) {
+    const taken = await Course.exists({ slug: candidate, ...(excludeId ? { _id: { $ne: excludeId } } : {}) });
+    if (!taken) return candidate;
+    candidate = `${base.slice(0, 85)}-${n}`;
+  }
+};
+
+// Courses are addressed by ObjectId or slug.
+export const loadCourseFor = async (user, idOrSlug) => {
+  let query;
+  if (/^[a-f\d]{24}$/i.test(idOrSlug)) query = Course.findById(idOrSlug);
+  else if (SLUG_RE.test(idOrSlug)) query = Course.findOne({ slug: idOrSlug });
+  else throw badRequest("Invalid course id or slug", "VALIDATION_ERROR");
+  const course = await query.populate("instructors", "userName");
   if (!course || (!isStaff(user) && course.status !== "published")) {
     throw new AppError(404, "COURSE_NOT_FOUND", "Course not found");
   }

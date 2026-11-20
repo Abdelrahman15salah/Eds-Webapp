@@ -17,5 +17,6 @@ scripts:
     code: |-
       pm.test("Status is 201", () => pm.response.to.have.status(201));
       pm.environment.set('courseId', pm.response.json().data.course.id);
+      pm.environment.set('courseSlug', pm.response.json().data.course.slug);
     language: text/javascript
 order: 1000

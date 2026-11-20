@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { objectId } from "./user.validators.js";
+import { SLUG_RE } from "../utils/slug.js";
 
 // Integer piasters: 100 = 1 EGP.
 const price = z
@@ -17,8 +18,11 @@ const idList = z
 
 const atLeastOne = (v) => Object.keys(v).length > 0;
 
+const slug = z.string().trim().toLowerCase().max(90).regex(SLUG_RE, "Slug may contain lowercase letters, digits and single hyphens");
+
 export const createCourseSchema = z.object({
   title,
+  slug: slug.optional(),
   description: description.optional(),
   category: z.string().trim().min(1).max(60).optional(),
   price,
@@ -29,6 +33,7 @@ export const createCourseSchema = z.object({
 export const updateCourseSchema = z
   .object({
     title: title.optional(),
+    slug: slug.optional(),
     description: description.optional(),
     category: z.string().trim().min(1).max(60).nullable().optional(),
     price: price.optional(),

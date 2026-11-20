@@ -1,6 +1,6 @@
 $kind: http-request
-url: "{{baseUrl}}/modules/{{moduleId2}}"
-method: DELETE
+url: "{{baseUrl}}/modules/{{moduleId2}}/archive"
+method: POST
 scripts:
   - type: afterResponse
     code: |-

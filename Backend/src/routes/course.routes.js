@@ -24,7 +24,8 @@ router.get("/:id/modules", modules.listModules);
 // SuperAdmin-only content management.
 router.post("/", admin, validateBody(createCourseSchema), courses.createCourse);
 router.patch("/:id", admin, validateBody(updateCourseSchema), courses.updateCourse);
-router.delete("/:id", admin, courses.deleteCourse);
+router.post("/:id/archive", admin, courses.archiveCourse);
+router.post("/:id/restore", admin, courses.restoreCourse);
 router.put("/:id/instructors", admin, validateBody(setInstructorsSchema), courses.setCourseInstructors);
 router.post("/:id/modules", admin, validateBody(createModuleSchema), modules.createModule);
 router.put("/:id/modules/order", admin, validateBody(reorderModulesSchema), modules.reorderModules);

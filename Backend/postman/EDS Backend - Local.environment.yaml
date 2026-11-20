@@ -22,3 +22,5 @@ values:
     value: ''
   - key: instructorId
     value: ''
+  - key: courseSlug
+    value: ''

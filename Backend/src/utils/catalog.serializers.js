@@ -20,6 +20,7 @@ export const publicModule = (m) => ({
 
 export const publicCourse = (c, modules) => ({
   id: String(c._id),
+  slug: c.slug ?? null,
   title: c.title,
   description: c.description,
   category: c.category ?? null,

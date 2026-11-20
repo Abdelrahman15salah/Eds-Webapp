@@ -17,6 +17,7 @@ router.patch(
   modules.updateModule,
 );
 router.put("/:id/instructors", requireRole("SuperAdmin"), validateBody(setInstructorsSchema), modules.setModuleInstructors);
-router.delete("/:id", requireRole("SuperAdmin"), modules.deleteModule);
+router.post("/:id/archive", requireRole("SuperAdmin"), modules.archiveModule);
+router.post("/:id/restore", requireRole("SuperAdmin"), modules.restoreModule);
 
 export default router;

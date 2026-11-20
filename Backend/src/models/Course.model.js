@@ -10,6 +10,8 @@ const courseSchema = new mongoose.Schema(
       minlength: [3, "Title must be at least 3 characters"],
       maxlength: [120, "Title cannot exceed 120 characters"],
     },
+    // URL-friendly unique identifier, e.g. "endodontics-101".
+    slug: { type: String, trim: true, lowercase: true, maxlength: 90 },
     description: { type: String, trim: true, maxlength: 5000, default: "" },
     category: { type: String, trim: true, maxlength: 60 },
     // Fixed discounted price for enrolling in the whole course (all modules).
@@ -28,5 +30,6 @@ const courseSchema = new mongoose.Schema(
 
 courseSchema.index({ status: 1, createdAt: -1 });
 courseSchema.index({ category: 1 });
+courseSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
 export const Course = mongoose.model("Course", courseSchema);
